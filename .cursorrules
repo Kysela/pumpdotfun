@@ -1,0 +1,236 @@
+# =========================================================
+# CURSOR RULES — PUMP.FUN SIGNAL DETECTION + PAPER TRADING
+# Version: 1.0
+# Mode: Deterministic / Rule-Based / No ML
+# =========================================================
+
+## 0. CORE PRINCIPLE
+This system does NOT predict price.
+It detects ATTENTION ACCELERATION and LIQUIDITY SHAPE
+before mass participation.
+
+Price is a lagging indicator.
+Signals come from behavior, not charts.
+
+---
+
+## 1. SCOPE
+- Network: Solana
+- Platform: pump.fun
+- Mode: PAPER TRADING ONLY (no real funds)
+- Objective: Validate signal edge, timing, and exits
+
+---
+
+## 2. DATA SOURCES
+
+### Required Streams
+- Solana WebSocket RPC
+- Filtered by pump.fun program ID
+- Transaction types: BUY only
+
+### Per Transaction Capture
+- token_address
+- timestamp (unix ms)
+- buyer_wallet
+- sol_amount
+- tx_hash
+
+---
+
+## 3. TOKEN LIFECYCLE TRACKING
+
+Each token is tracked ONLY for first 20 minutes since first tx.
+
+Ignore token if:
+- age > 20 minutes
+- fewer than 2 unique buyers after 5 minutes
+
+---
+
+## 4. ROLLING WINDOWS
+
+Maintain rolling windows per token:
+- 30 seconds
+- 60 seconds
+- 180 seconds
+- First 5 minutes since birth
+
+Store in Redis or in-memory ring buffers.
+
+---
+
+## 5. FEATURE EXTRACTION
+
+### Core Metrics
+buyers_5m            = unique buyers in first 5 minutes
+tx_count_60s         = number of tx in last 60s
+tx_count_prev_60s    = tx count in previous 60s
+tx_acceleration      = tx_count_60s - tx_count_prev_60s
+
+avg_buy_size         = mean SOL per buy (rolling 180s)
+buy_size_std         = std deviation of buy sizes
+repeat_buyers        = wallets with 2+ buys
+largest_buy          = max SOL buy
+
+tx_interval_mean     = mean seconds between tx
+tx_interval_delta    = current interval < previous interval
+
+---
+
+## 6. HARD FILTERS (FAIL = DROP TOKEN)
+
+Drop token immediately if:
+- largest_buy > 2 SOL
+- avg_buy_size > 0.8 SOL
+- avg_buy_size < 0.03 SOL
+- buy_size_std high (whale noise)
+- dev wallet buys more than once
+- metadata edited more than once
+
+---
+
+## 7. SIGNAL CONDITIONS
+
+### A) Early Attention Signal (EAS)
+buyers_5m >= 6
+AND tx_interval_mean < 20s
+AND tx_acceleration > 0
+
+### B) Liquidity Shape Filter (LSF)
+avg_buy_size between 0.05–0.5 SOL
+AND buy_size_std LOW
+AND largest_buy <= 2 SOL
+
+### C) Momentum Confirmation (MC)
+tx_count_60s >= 5
+AND tx_interval_delta == TRUE
+
+All three must pass to score token.
+
+---
+
+## 8. SCORING MODEL
+
+Score is recalculated every 10 seconds.
+
+score =
+  buyers_5m * 2
++ tx_acceleration * 3
++ repeat_buyers * 2
+- (largest_buy > 1 SOL ? 5 : 0)
+- (tx_count_60s == 0 ? 10 : 0)
+
+---
+
+## 9. PAPER ENTRY RULES
+
+### Entry Eligibility
+IF:
+- score >= 18
+- token age between 2–12 minutes
+- estimated market cap between 3k–15k
+
+THEN:
+- create PAPER POSITION
+
+### Paper Position Params
+entry_price      = current implied price
+position_size    = 1.0 SOL (virtual)
+entry_timestamp  = now
+
+---
+
+## 10. PAPER EXIT ENGINE (NON-NEGOTIABLE)
+
+### Partial Exit
+IF virtual_pnl >= +120%
+THEN mark 50% position as SOLD
+
+### Full Exit
+IF:
+- virtual_pnl >= +220%
+OR
+- no tx in last 60 seconds
+OR
+- tx_count_60s decreases twice consecutively
+OR
+- token hits first stagnation after spike
+
+THEN close remaining position.
+
+No overrides.
+No discretion.
+No re-entry.
+
+---
+
+## 11. KILL SWITCH
+
+Immediately CLOSE position if:
+- zero tx for 60 seconds
+- sudden large buy > 3 SOL appears
+- dev wallet interacts again
+
+---
+
+## 12. LOGGING (MANDATORY)
+
+For each token:
+- token_address
+- entry_time
+- entry_score
+- entry_price
+- exit_time
+- exit_reason
+- max_unrealized_pnl
+- realized_pnl
+
+Store as JSONL for later analysis.
+
+---
+
+## 13. PERFORMANCE METRICS
+
+Track:
+- win rate
+- avg R multiple
+- avg time in trade
+- % exited by kill-switch
+- missed runners (score >= 18 but no entry)
+
+---
+
+## 14. STRICT PROHIBITIONS
+
+- No ML models
+- No sentiment analysis
+- No Twitter / Telegram signals
+- No manual overrides
+- No revenge entries
+
+---
+
+## 15. ITERATION RULE
+
+Rules may ONLY be modified after:
+- minimum 100 paper trades
+- statistical review of exits vs signals
+
+One change per iteration.
+No stacking tweaks.
+
+---
+
+## 16. DEFINITION OF SUCCESS
+
+System is VALID if:
+- win rate >= 35%
+- average R >= 2.5
+- max drawdown < 20% (paper)
+
+Anything else = noise.
+
+# =========================================================
+# END OF CURSOR RULES
+# =========================================================
