@@ -20,6 +20,111 @@ A deterministic, rule-based signal detection system for pump.fun tokens on Solan
 - **Kill switch** for emergency exits
 - **JSONL logging** for analysis
 - **Performance metrics** tracking
+- **Railway-ready** deployment configuration
+
+---
+
+## Quick Deploy to Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template)
+
+### One-Click Deployment
+
+1. Click the "Deploy on Railway" button above
+2. Connect your GitHub account
+3. Add environment variables (see below)
+4. Deploy!
+
+### Manual Deployment from GitHub
+
+1. **Create a new project on Railway**
+   - Go to [railway.app](https://railway.app)
+   - Click "New Project" → "Deploy from GitHub repo"
+   - Select your forked/cloned repository
+
+2. **Add Environment Variables**
+   
+   In Railway dashboard → Variables:
+   
+   | Variable | Required | Description |
+   |----------|----------|-------------|
+   | `SOLANA_RPC_HTTP` | Yes | Solana HTTP RPC endpoint |
+   | `SOLANA_RPC_WS` | Yes | Solana WebSocket RPC endpoint |
+   | `LOG_LEVEL` | No | `debug`, `info`, `warn`, `error` (default: `info`) |
+
+3. **Deploy**
+   
+   Railway will automatically:
+   - Detect the Node.js project
+   - Run `npm install` and `npm run build`
+   - Start the application
+   - Set up health checks at `/health`
+
+### Recommended RPC Providers
+
+The public Solana RPC is rate-limited. For production, use a dedicated provider:
+
+| Provider | Free Tier | Link |
+|----------|-----------|------|
+| Helius | Yes (100k req/day) | [helius.xyz](https://helius.xyz/) |
+| QuickNode | Yes (limited) | [quicknode.com](https://www.quicknode.com/) |
+| Triton | No | [triton.one](https://triton.one/) |
+
+Example with Helius:
+```
+SOLANA_RPC_HTTP=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
+SOLANA_RPC_WS=wss://mainnet.helius-rpc.com/?api-key=YOUR_KEY
+```
+
+---
+
+## Endpoints
+
+Once deployed, the following endpoints are available:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check (Railway uses this) |
+| `GET /status` | Detailed system status with metrics |
+| `GET /metrics` | Prometheus-compatible metrics |
+
+---
+
+## Local Development
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd pumpdotfun
+
+# Install dependencies
+npm install
+
+# Copy environment file
+cp .env.example .env
+# Edit .env with your RPC endpoints
+```
+
+### Running Locally
+
+```bash
+# Development mode (with hot reload)
+npm run dev
+
+# Production mode
+npm run build
+npm start
+
+# Run simulation (test with synthetic data)
+npm run simulate
+
+# Analyze trade logs
+npm run analyze
+```
+
+---
 
 ## Signal Conditions
 
@@ -79,104 +184,29 @@ Entry requires `score >= 18`.
 
 **No overrides. No discretion. No re-entry.**
 
-## Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd pumpdotfun
-
-# Install dependencies
-npm install
-
-# Copy environment file
-cp .env.example .env
-```
-
-## Configuration
-
-Edit `.env` file:
-
-```env
-# Solana RPC Configuration
-# For better performance, use a dedicated RPC provider (Helius, QuickNode, etc.)
-SOLANA_RPC_HTTP=https://api.mainnet-beta.solana.com
-SOLANA_RPC_WS=wss://api.mainnet-beta.solana.com
-
-# Logging
-LOG_LEVEL=info
-LOG_DIR=./logs
-```
-
-### Recommended RPC Providers
-
-For production use, a dedicated RPC is strongly recommended:
-- [Helius](https://helius.xyz/)
-- [QuickNode](https://www.quicknode.com/)
-- [Triton](https://triton.one/)
-
-## Usage
-
-### Development Mode
-
-```bash
-npm run dev
-```
-
-### Production Mode
-
-```bash
-# Build
-npm run build
-
-# Run
-npm start
-```
-
-### Watch Mode (for development)
-
-```bash
-npm run watch
-```
+---
 
 ## Project Structure
 
 ```
-src/
-├── config/
-│   └── index.ts          # Configuration constants
-├── types/
-│   └── index.ts          # TypeScript interfaces
-├── utils/
-│   ├── ringBuffer.ts     # Rolling window buffers
-│   ├── logger.ts         # Console/file logging
-│   └── eventEmitter.ts   # Internal event bus
-├── data/
-│   └── websocket.ts      # Solana WebSocket connection
-├── core/
-│   ├── tokenTracker.ts   # Token lifecycle management
-│   ├── filters.ts        # Hard filters
-│   ├── signals.ts        # Signal conditions (EAS, LSF, MC)
-│   ├── scoring.ts        # Scoring model
-│   └── signalEngine.ts   # Main orchestration
-├── trading/
-│   ├── position.ts       # Paper position management
-│   ├── entryEngine.ts    # Entry rules
-│   ├── exitEngine.ts     # Exit engine
-│   └── killSwitch.ts     # Kill switch logic
-├── logging/
-│   ├── tradeLogger.ts    # JSONL trade logging
-│   └── metrics.ts        # Performance metrics
-└── index.ts              # Entry point
+├── src/
+│   ├── config/           # Configuration constants
+│   ├── types/            # TypeScript interfaces
+│   ├── utils/            # Utilities (logger, events, buffers)
+│   ├── data/             # Solana WebSocket connection
+│   ├── core/             # Signal detection engine
+│   ├── trading/          # Paper trading (entry/exit/kill switch)
+│   ├── logging/          # JSONL logging & metrics
+│   ├── server/           # Health check HTTP server
+│   ├── scripts/          # Utility scripts
+│   └── index.ts          # Entry point
+├── Dockerfile            # Docker configuration
+├── railway.toml          # Railway configuration
+├── nixpacks.toml         # Nixpacks configuration
+└── Procfile              # Process definition
 ```
 
-## Logs
-
-Trades are logged to JSONL files in the `logs/` directory:
-
-```json
-{"tokenAddress":"...","entryTime":1234567890,"entryScore":22,"entryPrice":0.15,"exitTime":1234567950,"exitReason":"profit_target_full","maxUnrealizedPnL":250,"realizedPnL":0.45}
-```
+---
 
 ## Performance Metrics
 
@@ -202,9 +232,11 @@ Rules may ONLY be modified after:
 - ❌ No manual overrides
 - ❌ No revenge entries
 
+---
+
 ## API Events
 
-The system emits the following events:
+The system emits the following internal events:
 
 | Event | Description |
 |-------|-------------|
@@ -217,6 +249,8 @@ The system emits the following events:
 | `position_partial_exit` | 50% position sold |
 | `position_closed` | Position fully closed |
 | `kill_switch_triggered` | Emergency exit triggered |
+
+---
 
 ## License
 

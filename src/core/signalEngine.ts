@@ -302,7 +302,7 @@ export class SignalEngine {
   /**
    * Get system status
    */
-  getStatus(): object {
+  getStatus(): Record<string, unknown> {
     return {
       isRunning: this.isRunning,
       wsConnected: this.ws.connected,

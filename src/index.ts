@@ -1,9 +1,10 @@
 // =========================================================
 // PUMP.FUN SIGNAL DETECTION + PAPER TRADING
-// Main Entry Point
+// Main Entry Point — Railway Compatible
 // =========================================================
 
 import { SignalEngine } from './core/signalEngine';
+import { HealthServer } from './server/health';
 import { logger } from './utils/logger';
 
 /**
@@ -25,12 +26,21 @@ async function main(): Promise<void> {
 ╚═══════════════════════════════════════════════════════════════╝
 `);
 
+  // Initialize components
   const engine = new SignalEngine();
+  const healthServer = new HealthServer();
+
+  // Connect health server to engine status
+  healthServer.setStatusProvider(() => engine.getStatus());
 
   // Handle graceful shutdown
   const shutdown = async (signal: string) => {
     console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+    
+    // Stop components in order
     engine.stop();
+    await healthServer.stop();
+    
     process.exit(0);
   };
 
@@ -49,10 +59,14 @@ async function main(): Promise<void> {
   });
 
   try {
-    // Start the engine
+    // Start health server first (Railway needs this)
+    await healthServer.start();
+
+    // Start the signal engine
     await engine.start();
 
     logger.info('System is now monitoring pump.fun transactions');
+    logger.info('Health check available at /health');
     logger.info('Press Ctrl+C to stop and view metrics summary');
 
     // Keep running
@@ -60,6 +74,7 @@ async function main(): Promise<void> {
     
   } catch (error) {
     logger.error('Failed to start system', { error });
+    await healthServer.stop();
     process.exit(1);
   }
 }

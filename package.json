@@ -3,13 +3,19 @@
   "version": "1.0.0",
   "description": "Pump.fun signal detection and paper trading system for Solana",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc -w",
     "analyze": "ts-node src/scripts/analyze.ts",
-    "simulate": "ts-node src/scripts/simulate.ts"
+    "simulate": "ts-node src/scripts/simulate.ts",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "solana",

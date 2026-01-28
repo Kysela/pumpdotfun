@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output (we rebuild in Docker)
+dist/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files (should be set in Railway)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
+
+# Documentation
+*.md
+!README.md
+
+# License
+LICENSE
